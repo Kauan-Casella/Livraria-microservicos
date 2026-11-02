@@ -21,6 +21,8 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self): self._go("POST")
     def log_message(self, *a): pass
 if __name__ == "__main__":
+
     for m in (estoque, vendas, pagamento): m.init()
-    print("Livraria rodando em http://localhost:8000")
-    ThreadingHTTPServer(("", 8000), H).serve_forever()
+    port = int(os.environ.get("PORT", 8000))
+    print(f"Livraria rodando em http://localhost:{port}")
+    ThreadingHTTPServer(("", port), H).serve_forever()
