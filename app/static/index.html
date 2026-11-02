@@ -1,0 +1,30 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Livraria MVP</title><style>
+body{font-family:system-ui,sans-serif;margin:0;background:#f6f5f2;color:#222}header{background:#1f3a5f;color:#fff;padding:14px 24px;display:flex;gap:16px;align-items:center}
+nav button{background:none;border:0;color:#fff;font-size:15px;cursor:pointer;padding:6px 10px;border-radius:6px}nav button.on{background:#ffffff33}
+main{max-width:900px;margin:20px auto;padding:0 16px}.card{background:#fff;border-radius:10px;padding:14px;margin:10px 0;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px #0001}
+button.p{background:#1f3a5f;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer}input,select{padding:8px;border:1px solid #ccc;border-radius:6px;margin:4px 0}
+.msg{padding:10px;border-radius:6px;margin:10px 0}.ok{background:#d9f2e0}.err{background:#f9d9d9}small{color:#666}
+</style></head><body>
+<header><b>📚 Livraria</b><nav><button id="b-nav" onclick="tab('nav')">Navegação</button><button id="b-car" onclick="tab('car')">Carrinho (<span id="n">0</span>)</button><button id="b-his" onclick="tab('his')">Histórico</button></nav></header>
+<main id="m"></main>
+<script>
+let cart={},livros=[],msg='';const $=s=>document.getElementById(s);
+const api=async(p,o)=>{const r=await fetch('/api/'+p,o&&{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});return r.json()};
+const R=v=>'R$ '+v.toFixed(2).replace('.',',');
+function count(){$('n').textContent=Object.values(cart).reduce((a,b)=>a+b,0)}
+async function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));$('b-'+t).classList.add('on');
+ if(t=='nav'){livros=await api('estoque/livros');$('m').innerHTML=`<input placeholder="Buscar..." oninput="busca(this.value)" style="width:100%"><div id="l"></div>`;lista(livros)}
+ if(t=='car'){livros=await api('estoque/livros');let tot=0,h='';for(const id in cart){const l=livros.find(x=>x.id==id);tot+=l.preco*cart[id];h+=`<div class="card"><span>${l.titulo} × ${cart[id]}</span><span>${R(l.preco*cart[id])} <button onclick="rm(${id})">✕</button></span></div>`}
+  $('m').innerHTML=(h||'<p>Carrinho vazio</p>')+`<h3>Total: ${R(tot)}</h3><input id="cl" placeholder="Seu nome"><br><select id="mt"><option value="pix">Pix</option><option value="cartao">Cartão</option></select> <input id="ct" placeholder="Nº cartão (final 0000 = recusa)"><br><button class="p" onclick="pagar()">Finalizar compra</button>${msg}`;msg=''}
+ if(t=='his'){$('m').innerHTML=`<input id="hc" placeholder="Seu nome"> <button class="p" onclick="hist()">Ver pedidos</button><div id="h"></div>`}}
+const busca=async q=>lista(await api('estoque/livros?q='+encodeURIComponent(q)));
+const lista=ls=>$('l').innerHTML=ls.map(l=>`<div class="card"><div><b>${l.titulo}</b><br><small>${l.autor} · ${l.qtd} em estoque</small></div><div>${R(l.preco)} <button class="p" onclick="add(${l.id})">Adicionar</button></div></div>`).join('');
+const add=id=>{cart[id]=(cart[id]||0)+1;count()};const rm=id=>{delete cart[id];count();tab('car')};
+async function pagar(){const itens=Object.entries(cart).map(([id,qtd])=>({id:+id,qtd}));
+ const r=await api('vendas/checkout',{cliente:$('cl').value,itens,metodo:$('mt').value,cartao:$('ct').value});
+ if(r.status=='pago'){cart={};count();msg=`<div class="msg ok">Pedido #${r.pedido_id} pago: ${R(r.total)} ✅</div>`}else msg=`<div class="msg err">${r.erro||r.motivo}</div>`;tab('car')}
+async function hist(){const r=await api('vendas/historico?cliente='+encodeURIComponent($('hc').value));
+ $('h').innerHTML=r.map(p=>`<div class="card"><div><b>Pedido #${p.id}</b> · ${p.status}<br><small>${p.itens.map(i=>i.titulo+' ×'+i.qtd).join(', ')}</small></div><b>${R(p.total)}</b></div>`).join('')||'<p>Nenhum pedido.</p>'}
+tab('nav');
+</script></body></html>
