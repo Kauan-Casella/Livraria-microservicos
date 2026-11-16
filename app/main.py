@@ -1,3 +1,12 @@
+import os
+import sys
+
+# Adiciona o diretório app ao path do Python para encontrar os módulos corretamente
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+eu copio exatamente isso ou preciso mudar
+
+
 import json, os, sys
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
